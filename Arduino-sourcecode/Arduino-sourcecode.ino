@@ -1,5 +1,3 @@
-//#include "MotorCtrl.h"
-
 // ここでピンの指定をする
 #define PWM_PIN1    9
 #define PWM_PIN2    10
@@ -18,21 +16,33 @@
 */
 
 
+
+
+/*\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\\
+<<         分 割 失 敗 し た ! !　   　  メインまで読み飛ばしてもいい!!                 >>
+//\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\//*/
+
+///////////////////////////////////////////////////////////////////////////
+// 実はｈファイルに分割したい部分
 /////////////////////////
+
 // 以下くらす宣言
 class MotorCtrl {
+  /// 山林雄武二の制御用クラス
 private:
     int operationThreshold = 10;
     void mtCtrl(int pin,char power); // pin は　1~3で指定
 public:
     MotorCtrl();
     void setOperationThreshold(int percent); // 作動しない範囲の指定 (初期値10%, 0~100%で指定)
-    void move(const unsigned char x,const unsigned char y);
+    void move(const unsigned char x,const unsigned char y); // 0~255で値を入れる
     void stop(){
         move(0,0);
     }
 };
 
+////////////////////////////////////////////////////////////////////////////////////
+// 以下は実はcppファイルで分割したい部分
 //#include "MotorCtrl.h"
 
 MotorCtrl::MotorCtrl () {
@@ -107,13 +117,21 @@ void MotorCtrl::move (const unsigned char x, const unsigned char y) {
     }
 }
 
-MotorCtrl mt;
+//////////////////////////////////////////////////////////////////////////////////
+
+//\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\\
+// これより下にコードは書いてね!!
+
+MotorCtrl motor;  // これはクラスを使う例
 
 void setup() {
   // put your setup code here, to run once
+
+  motor.setOperationThreshold(20); // スティックの感じやすさ 0~100で調節できて100だと感じない (初期値は20)
+  motor.stop(); // 緊急停止に使う
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  mt.move(2,4);
+  motor.move(255,255);
 }
