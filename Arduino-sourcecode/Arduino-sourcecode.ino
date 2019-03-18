@@ -7,6 +7,11 @@
 #define DIGITAL_PIN2    5
 #define DIGITAL_PIN3    6
 
+#define RIGHT   0
+#define LEFT    1
+
+#define STOP_MT 0
+
 /* ピンの位置
        (1)
         |
@@ -28,17 +33,17 @@
 
 // 以下くらす宣言
 class MotorCtrl {
-  /// 山林雄武二の制御用クラス
+    // ３輪のベクトル制御のクラス
 private:
     int operationThreshold = 10;
-    void mtCtrl(int pin,char power); // pin は　1~3で指定
+    void mtCtrl(int pwmPin,int digitalPin,char power);
 public:
     MotorCtrl();
     void setOperationThreshold(int percent); // 作動しない範囲の指定 (初期値10%, 0~100%で指定)
     void move(const unsigned char x,const unsigned char y); // 0~255で値を入れる
-    void stop(){
-        move(0,0);
-    }
+    void move(const unsigned char debug_code); // デバッグ用隠し機能? (オーバーロード)
+    void stop() { move(STOP_MT); } // モーター停止
+    void turn(const unsigned char RIGHT_OR_LEFT,const unsigned char power); // define に RIGHT と LEFT があるからそれを入れる
 };
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -53,43 +58,17 @@ MotorCtrl::MotorCtrl () {
     pinMode(DIGITAL_PIN1,OUTPUT);
     pinMode(DIGITAL_PIN2,OUTPUT);
     pinMode(DIGITAL_PIN3,OUTPUT);
-  
+
 }
 
-void MotorCtrl::mtCtrl(int pin,char power){
-    switch (pin) {
-        case 1:
-            if(power >= 0){
-                digitalWrite(DIGITAL_PIN1,0);
-                analogWrite(PWM_PIN1,power);
-            }
-            else {
-                digitalWrite(DIGITAL_PIN1,1);
-                analogWrite(PWM_PIN1,255 - power);
-            } 
-        break;
-        case 2:
-            if(power >= 0){
-                digitalWrite(DIGITAL_PIN2,1);
-                analogWrite(PWM_PIN2,255 - power);
-            }
-            else {
-                digitalWrite(DIGITAL_PIN2,1);
-                analogWrite(PWM_PIN2,255 - power);
-            }
-        break;
-        case 3:
-            if(power >= 0){
-                digitalWrite(DIGITAL_PIN3,1);
-                analogWrite(PWM_PIN3,255 - power);
-            }
-            else {
-                digitalWrite(DIGITAL_PIN3,1);
-                analogWrite(PWM_PIN3,255 - power);
-            }
-        break;
-        default:
-        break;
+void MotorCtrl::mtCtrl(int pwmPin,int digitalPin,char power){
+    if(power >= 0){
+        digitalWrite(digitalPin,0);
+        analogWrite(pwmPin,power);
+    }
+    else {
+        digitalWrite(digitalPin,1);
+        analogWrite(pwmPin,255 - power);
     }
 }
 
@@ -111,9 +90,30 @@ void MotorCtrl::move (const unsigned char x, const unsigned char y) {
     } 
     else {
         // 出力処理処理
-        mtCtrl(1,(char)((sin(-1.0)*correct_x)+(cos(0.0)*correct_y)));
-        mtCtrl(2,(char)((sin(1.0/2)*correct_x)+(cos(-sqrt(3.0)/2.0)*correct_y)));
-        mtCtrl(3,(char)((sin(1.0/2)*correct_x)+(cos(sqrt(3.0)/2.0)*correct_y)));
+        mtCtrl(PWM_PIN1,DIGITAL_PIN1,(char)((sin(-1.0)*correct_x)+(cos(0.0)*correct_y)));
+        mtCtrl(PWM_PIN2,DIGITAL_PIN2,(char)((sin(1.0/2)*correct_x)+(cos(-sqrt(3.0)/2.0)*correct_y)));
+        mtCtrl(PWM_PIN3,DIGITAL_PIN3,(char)((sin(1.0/2)*correct_x)+(cos(sqrt(3.0)/2.0)*correct_y)));
+    }
+}
+
+void MotorCtrl::move(const unsigned char debug_code){
+    if(debug_code == STOP_MT){
+        mtCtrl(PWM_PIN1,DIGITAL_PIN1,0);
+        mtCtrl(PWM_PIN2,DIGITAL_PIN2,0);
+        mtCtrl(PWM_PIN3,DIGITAL_PIN3,0);
+    }
+    
+}
+
+void MotorCtrl::turn(const unsigned char RIGHT_OR_LEFT, const unsigned char power){
+    if(RIGHT_OR_LEFT == RIGHT){
+        mtCtrl(PWM_PIN1,DIGITAL_PIN1,power);
+        mtCtrl(PWM_PIN2,DIGITAL_PIN2,power);
+        mtCtrl(PWM_PIN3,DIGITAL_PIN3,power);
+    }else if(RIGHT_OR_LEFT == LEFT){
+        mtCtrl(PWM_PIN1,DIGITAL_PIN1,255 - power);
+        mtCtrl(PWM_PIN2,DIGITAL_PIN2,255 - power);
+        mtCtrl(PWM_PIN3,DIGITAL_PIN3,255 - power);
     }
 }
 
@@ -122,7 +122,7 @@ void MotorCtrl::move (const unsigned char x, const unsigned char y) {
 //\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\\
 // これより下にコードは書いてね!!
 
-MotorCtrl motor;  // これはクラスを使う例
+MotorCtrl motor;  // これはクラスを使う例 使うときは消してね
 
 void setup() {
   // put your setup code here, to run once
@@ -134,4 +134,5 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   motor.move(255,255);
+  motor.turn(RIGHT,255);
 }
