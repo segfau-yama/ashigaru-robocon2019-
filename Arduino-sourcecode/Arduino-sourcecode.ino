@@ -79,7 +79,7 @@ void MotorCtrl::setOperationThreshold(int percent) {
 void MotorCtrl::move (const unsigned char x, const unsigned char y) {
     char correct_x = x - 128;
     char correct_y = 128 - y;
-    if(hypot(correct_y,correct_x)/128*100 > operationThreshold){
+    if(hypot(correct_y,correct_x)/128*100 < operationThreshold){
         digitalWrite(DIGITAL_PIN1,0);
         digitalWrite(DIGITAL_PIN1,0);
         digitalWrite(DIGITAL_PIN1,0);
