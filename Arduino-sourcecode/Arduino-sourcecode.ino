@@ -1,3 +1,6 @@
+// こいつが置いてあるディレクトリにreadme.txtがあるから読め!!
+// あと, 
+
 // ここでピンの指定をする
 #define PWM_PIN1    9
 #define PWM_PIN2    10
@@ -20,7 +23,19 @@
    (2)      (3)
 */
 
+// 通信回りの宣言
+//////////////////////////////////////////////////////////////////////////
+#include <Wii.h>
+#include <usbhub.h>
+#ifdef dobogusinclude
+#include <spi4teensy3.h>
+#endif
+#include <SPI.h>
 
+USB Usb;
+BTD Btd(&Usb); 
+WII Wii(&Btd, PAIR);
+bool printAngle;
 
 
 /*\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\\
@@ -38,7 +53,7 @@ private:
     int operationThreshold = 10;
     void mtCtrl(int pwmPin,int digitalPin,char power);
 public:
-    MotorCtrl();
+    MotorCtrl(); // コンストラクタ
     void setOperationThreshold(int percent); // 作動しない範囲の指定 (初期値10%, 0~100%で指定)
     void move(const unsigned char x,const unsigned char y); // 0~255で値を入れる
     void move(const unsigned char debug_code); // デバッグ用隠し機能? (オーバーロード)
@@ -127,12 +142,62 @@ MotorCtrl motor;  // これはクラスを使う例 使うときは消してね
 void setup() {
   // put your setup code here, to run once
 
-  motor.setOperationThreshold(20); // スティックの感じやすさ 0~100で調節できて100だと感じない (初期値は20)
-  motor.stop(); // 緊急停止に使う
+    //通信回りの初期化
+    pinMode(13,OUTPUT);
+    Serial.begin(115200);
+#if !defined(__MIPSEL__)
+    while (!Serial);
+#endif
+    if (Usb.Init() == -1) {
+        Serial.print(F("\r\n通信失敗"));
+            while (1); //halt
+    }
+    Serial.print(F("\r\n通信開始"));
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  motor.move(255,255);
-  motor.turn(RIGHT,255);
+    int x,y;
+    Usb.Task();
+
+    // 通信の確認？
+    if (Wii.wiimoteConnected) {
+        digitalWrite(13,LOW);
+        if (Wii.getButtonClick(HOME)) {
+            Serial.print(F("\r\nHOME"));
+            Wii.disconnect();
+        }
+    }
+    
+
+    // このif文の中に移動などの動きを書いていくという認識で会ってる?
+    if (Wii.nunchuckConnected) {
+        // このif の判定がいるか疑問が残る(なぜならmove(x,y)に値を入れるだけで勝手に動いてほしくない場所を指定できるから)
+        if (Wii.getAnalogHat(HatX) > 137 ||  Wii.getAnalogHat(HatX) < 117 || Wii.getAnalogHat(HatY) > 137 || Wii.getAnalogHat(HatY) < 117) {
+
+            // シリアル通信は基本的に重いのでデバッグ時のみ有効化すべきかなぁ?
+            Serial.print(F("\r\nHatX: "));
+            Serial.print(Wii.getAnalogHat(HatX));
+            Serial.print(F("\tHatY: "));
+            Serial.print(Wii.getAnalogHat(HatY));
+
+            // xとyの値取り出し であってる? motor.move(Wii.getAnalogHat(HatX),Wii.getAnalogHat(HatY)); でもいいかもね
+            x=Wii.getAnalogHat(HatX);
+            y=Wii.getAnalogHat(HatY);
+
+            // 移動処理だよねこれ
+            motor.move(x,y);
+        }
+
+        //旋回がしたくばこういうコードになると思われる -- 追伸, 右と左の動きが逆かもしれないからその時は補正してね
+        /*
+        if ( R1が押されたとき ) {
+            motor.turn(RIGHT, 100)
+        } 
+        else if ( L1が押されたとき ) {
+            motor.turn(LEFT, 100)
+        }
+        */
+    }
 }
