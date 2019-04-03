@@ -10,8 +10,8 @@
 #define DIGITAL_PIN2    5
 #define DIGITAL_PIN3    6
 
-#define RIGHT   0
-#define LEFT    1
+#define TURN_RIGHT   0
+#define TURN_LEFT    1
 
 #define STOP_MT 0
 
@@ -25,7 +25,8 @@
 
 // 通信回りの宣言
 //////////////////////////////////////////////////////////////////////////
-#include <Wii.h>
+#include <PS3BT.h>
+//#include <Wii.h>
 #include <usbhub.h>
 #ifdef dobogusinclude
 #include <spi4teensy3.h>
@@ -34,8 +35,9 @@
 
 USB Usb;
 BTD Btd(&Usb); 
-WII Wii(&Btd, PAIR);
-bool printAngle;
+PS3BT PS3(&Btd); 
+//WII Wii(&Btd, PAIR);
+bool printTemperature,printAngle;
 
 
 /*\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\\
@@ -143,14 +145,14 @@ void setup() {
   // put your setup code here, to run once
 
     //通信回りの初期化
-    pinMode(13,OUTPUT);
+    //pinMode(13,OUTPUT);
     Serial.begin(115200);
 #if !defined(__MIPSEL__)
     while (!Serial);
 #endif
     if (Usb.Init() == -1) {
         Serial.print(F("\r\n通信失敗"));
-            while (1); //halt
+        while (1); //halt
     }
     Serial.print(F("\r\n通信開始"));
 
@@ -158,11 +160,33 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-    int x,y;
+    //int x,y;
     Usb.Task();
 
+    if (PS3.PS3Connected || PS3.PS3NavigationConnected) {
+      if (PS3.getAnalogHat(RightHatX) > 137 || PS3.getAnalogHat(RightHatX) < 117 || PS3.getAnalogHat(RightHatY) > 137 || PS3.getAnalogHat(RightHatY) < 117) {
+        if (PS3.PS3Connected) { // The Navigation controller only have one joystick
+          Serial.print(F("\tRightHatX: "));
+          Serial.print(PS3.getAnalogHat(RightHatX));
+          Serial.print(F("\tRightHatY: "));
+          Serial.print(PS3.getAnalogHat(RightHatY));
+          motor.move(PS3.getAnalogHat(RightHatX),PS3.getAnalogHat(RightHatY));
+        }
+      }
+      if (PS3.getAnalogButton(L2) || PS3.getAnalogButton(R2)) {
+        Serial.print(F("\r\nL2: "));
+        Serial.print(PS3.getAnalogButton(L2));
+        motor.turn(TURN_LEFT, 100);
+        if (PS3.PS3Connected) {
+          Serial.print(F("\tR2: "));
+          Serial.print(PS3.getAnalogButton(R2));
+          motor.turn(TURN_RIGHT, 100);
+        }
+      }
+    }
+
     // 通信の確認？
-    if (Wii.wiimoteConnected) {
+    /*if (Wii.wiimoteConnected) {
         digitalWrite(13,LOW);
         if (Wii.getButtonClick(HOME)) {
             Serial.print(F("\r\nHOME"));
@@ -170,13 +194,7 @@ void loop() {
         }
     }
     
-
-    // このif文の中に移動などの動きを書いていくという認識で会ってる?
     if (Wii.nunchuckConnected) {
-        // このif の判定がいるか疑問が残る(なぜならmove(x,y)に値を入れるだけで勝手に動いてほしくない場所を指定できるから)
-        if (Wii.getAnalogHat(HatX) > 137 ||  Wii.getAnalogHat(HatX) < 117 || Wii.getAnalogHat(HatY) > 137 || Wii.getAnalogHat(HatY) < 117) {
-
-            // シリアル通信は基本的に重いのでデバッグ時のみ有効化すべきかなぁ?
             Serial.print(F("\r\nHatX: "));
             Serial.print(Wii.getAnalogHat(HatX));
             Serial.print(F("\tHatY: "));
@@ -187,17 +205,5 @@ void loop() {
             y=Wii.getAnalogHat(HatY);
 
             // 移動処理だよねこれ
-            motor.move(x,y);
-        }
-
-        //旋回がしたくばこういうコードになると思われる -- 追伸, 右と左の動きが逆かもしれないからその時は補正してね
-        /*
-        if ( R1が押されたとき ) {
-            motor.turn(RIGHT, 100)
-        } 
-        else if ( L1が押されたとき ) {
-            motor.turn(LEFT, 100)
-        }
-        */
-    }
+            motor.move(x,y);*/
 }
